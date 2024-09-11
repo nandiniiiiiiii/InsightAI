@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 #sentiment_analyzer = pipeline('sentiment-analysis')
 sentiment_analyzer = pipeline('sentiment-analysis', model='distilbert-base-uncased-finetuned-sst-2-english')
 #sentiment_analyzer = pipeline('sentiment-analysis', model='bert-base-uncased')
-def analyze_speech():
+def analyze_speech(stop_event):
     """Function to capture and analyze speech continuously."""
     recognizer = sr.Recognizer()
     mic = sr.Microphone()
@@ -43,18 +43,29 @@ def analyze_speech():
 
     except KeyboardInterrupt:
         print("\nInterrupted by user. Stopping...")
-        sys.exit(0)
+        stop_event.set()
 
-def signal_handler(signal, frame):
+def signal_handler(signal, frame, stop_event):
     """Handle interrupt signal to exit gracefully."""
     print("\nInterrupt signal received. Stopping...")
-    sys.exit(0)
+    stop_event.set()
 
-if __name__ == "__main__":
+def main():
     # Set up signal handler for graceful exit
-    signal.signal(signal.SIGINT, signal_handler)
+    stop_event = threading.Event()
+    signal.signal(signal.SIGINT, lambda signal, frame: signal_handler(signal, frame, stop_event))
     
     # Run the speech analysis in a separate thread
-    analysis_thread = threading.Thread(target=analyze_speech)
+    analysis_thread = threading.Thread(target=analyze_speech, args=(stop_event,))
+    analysis_thread.daemon = True
     analysis_thread.start()
-    analysis_thread.join()
+
+    try:
+        while not stop_event.is_set():
+            analysis_thread.join(timeout=1)
+    except KeyboardInterrupt:
+        stop_event.set()
+        print("\nStopping due to keyboard interrupt.")
+    
+if __name__=="main":
+    main()

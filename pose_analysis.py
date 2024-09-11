@@ -73,8 +73,7 @@ def analyze_facial_expression(frame):
     except:
         return "No face detected."
 
-
-if __name__ == "__main__":
+def main():
     # Open the default camera
     cap = cv2.VideoCapture(0)
 
@@ -95,3 +94,6 @@ if __name__ == "__main__":
 
     cap.release()
     cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    main()
